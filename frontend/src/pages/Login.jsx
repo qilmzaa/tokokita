@@ -38,6 +38,7 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nama_pengguna: namaPengguna, kata_sandi: kataSandi, ingat_saya: ingatSaya }),
       })
+      window.localStorage.setItem('tokokita_mode', 'staf')
       const tujuan = lokasi.state?.from || '/'
       navigate(typeof tujuan === 'string' ? tujuan : `${tujuan.pathname}${tujuan.search ?? ''}`, { replace: true })
     } catch (error) {

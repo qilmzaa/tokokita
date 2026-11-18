@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
-wajibLogin();
+$profil = wajibLogin();
 
 /**
  * Membaca body JSON dan mengembalikan array asosiatif.
@@ -72,6 +72,9 @@ function formatTransaksi(array $baris): array
         'tanggal'        => $baris['tanggal'],
         'id_pelanggan'   => (int) $baris['id_pelanggan'],
         'nama_pelanggan' => $baris['nama_pelanggan'],
+        'nama_kasir'     => $baris['nama_kasir'] ?? null,
+        'metode_pembayaran' => $baris['metode_pembayaran'] ?? null,
+        'waktu_transaksi' => $baris['waktu_transaksi'] ?? null,
         'jumlah_item'    => (int) $baris['jumlah_item'],
         'total_belanja'  => (float) $baris['total_belanja'],
     ];
@@ -83,8 +86,10 @@ function formatTransaksi(array $baris): array
 function ambilDetailTransaksi(PDO $pdo, int $id): ?array
 {
     $stmt = $pdo->prepare(
-        'SELECT t.id_transaksi, t.tanggal, t.id_pelanggan, p.nama_pelanggan,
-                p.kota, t.total_belanja
+        'SELECT t.id_transaksi, t.tanggal, t.waktu_transaksi, t.id_pelanggan,
+                p.nama_pelanggan, p.kota, t.total_belanja, t.nama_kasir,
+                t.metode_pembayaran, t.uang_diterima, t.kembalian,
+                t.diskon_nominal
          FROM tbl_transaksi AS t
          INNER JOIN tbl_pelanggan AS p ON p.id_pelanggan = t.id_pelanggan
          WHERE t.id_transaksi = :id'
@@ -99,7 +104,7 @@ function ambilDetailTransaksi(PDO $pdo, int $id): ?array
     }
 
     $stmt = $pdo->prepare(
-        'SELECT d.id_detail, d.id_produk, pr.nama_produk, k.nama_kategori,
+        'SELECT d.id_detail, d.id_produk, pr.nama_produk, k.nama_kategori, pr.foto,
                 d.jumlah, d.harga, d.diskon_persen, d.subtotal
          FROM tbl_detail_transaksi AS d
          INNER JOIN tbl_produk AS pr ON pr.id_produk = d.id_produk
@@ -116,6 +121,7 @@ function ambilDetailTransaksi(PDO $pdo, int $id): ?array
             'id_produk'     => (int) $baris['id_produk'],
             'nama_produk'   => $baris['nama_produk'],
             'nama_kategori' => $baris['nama_kategori'],
+            'foto'          => $baris['foto'] !== null ? (string) $baris['foto'] : null,
             'jumlah'        => (int) $baris['jumlah'],
             'harga'         => (float) $baris['harga'],
             'diskon_persen' => (float) $baris['diskon_persen'],
@@ -130,6 +136,12 @@ function ambilDetailTransaksi(PDO $pdo, int $id): ?array
         'id_pelanggan'   => (int) $kepala['id_pelanggan'],
         'nama_pelanggan' => $kepala['nama_pelanggan'],
         'kota'           => $kepala['kota'],
+        'nama_kasir' => $kepala['nama_kasir'],
+        'metode_pembayaran' => $kepala['metode_pembayaran'],
+        'waktu_transaksi' => $kepala['waktu_transaksi'],
+        'uang_diterima' => $kepala['uang_diterima'] === null ? null : (float) $kepala['uang_diterima'],
+        'kembalian' => $kepala['kembalian'] === null ? null : (float) $kepala['kembalian'],
+        'diskon_nominal' => (float) $kepala['diskon_nominal'],
         'total_belanja'  => (float) $kepala['total_belanja'],
         'items'          => $items,
     ];
@@ -163,6 +175,15 @@ try {
     if ($metode === 'GET') {
         if (isset($_GET['id'])) {
             $id = ambilIdTransaksi();
+            if ($profil['peran'] !== 'Admin') {
+                $stmt = $pdo->prepare(
+                    'SELECT id_pengguna FROM tbl_transaksi WHERE id_transaksi = :id'
+                );
+                $stmt->execute([':id' => $id]);
+                if ((int) $stmt->fetchColumn() !== $profil['id_pengguna']) {
+                    kirimError('Transaksi tidak ditemukan.', 404);
+                }
+            }
             $transaksi = ambilDetailTransaksi($pdo, $id);
 
             if ($transaksi === null) {
@@ -172,16 +193,20 @@ try {
             kirimJson(['data' => $transaksi]);
         }
 
-        $stmt = $pdo->prepare(
-            'SELECT t.id_transaksi, t.tanggal, t.id_pelanggan, p.nama_pelanggan,
-                    t.total_belanja,
+        $sql = 'SELECT t.id_transaksi, t.tanggal, t.id_pelanggan, p.nama_pelanggan,
+                    t.total_belanja, t.nama_kasir, t.metode_pembayaran,
+                    t.waktu_transaksi,
                     (SELECT COUNT(*)
                      FROM tbl_detail_transaksi AS d
                      WHERE d.id_transaksi = t.id_transaksi) AS jumlah_item
              FROM tbl_transaksi AS t
              INNER JOIN tbl_pelanggan AS p ON p.id_pelanggan = t.id_pelanggan
-             ORDER BY t.tanggal DESC, t.id_transaksi DESC'
-        );
+             ' . ($profil['peran'] === 'Admin' ? '' : 'WHERE t.id_pengguna = :id_pengguna ') .
+             'ORDER BY t.tanggal DESC, t.id_transaksi DESC';
+        $stmt = $pdo->prepare($sql);
+        if ($profil['peran'] !== 'Admin') {
+            $stmt->bindValue(':id_pengguna', $profil['id_pengguna'], PDO::PARAM_INT);
+        }
         $stmt->execute();
 
         $daftar = array_map('formatTransaksi', $stmt->fetchAll());
@@ -190,6 +215,7 @@ try {
     }
 
     if ($metode === 'POST') {
+        wajibPeran(['Admin']);
         $input = bacaBodyJson();
 
         $idPelanggan = filter_var(

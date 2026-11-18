@@ -16,10 +16,12 @@ import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
+import ProductImage from '../components/ProductImage'
 import Skeleton from '../components/Skeleton'
 import Struk from '../components/Struk'
 import { ambilData } from '../lib/api'
 import { formatAngka, formatRupiah, formatTanggal } from '../lib/format'
+import { useSession } from '../lib/session'
 
 function inisial(nama = '') {
   const bagian = nama.trim().split(/\s+/).filter(Boolean).slice(0, 2)
@@ -79,13 +81,21 @@ function DetailTransaksi({ transaksi }) {
               className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    {item.nama_produk}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {item.nama_kategori}
-                  </p>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <ProductImage
+                    foto={item.foto}
+                    nama={item.nama_produk}
+                    className="h-10 w-10"
+                    ikonSize={18}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                      {item.nama_produk}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {item.nama_kategori}
+                    </p>
+                  </div>
                 </div>
                 <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-white">
                   {formatRupiah(item.subtotal)}
@@ -126,12 +136,22 @@ function DetailTransaksi({ transaksi }) {
               {transaksi.items.map((item) => (
                 <tr key={item.id_detail}>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-slate-800 dark:text-slate-100">
-                      {item.nama_produk}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                      {item.nama_kategori}
-                    </p>
+                    <div className="flex items-center gap-2.5">
+                      <ProductImage
+                        foto={item.foto}
+                        nama={item.nama_produk}
+                        className="h-9 w-9"
+                        ikonSize={16}
+                      />
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-800 dark:text-slate-100">
+                          {item.nama_produk}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {item.nama_kategori}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600 dark:text-slate-300">
                     {formatRupiah(item.harga)}
@@ -180,6 +200,8 @@ export default function Transaksi() {
 
   const navigate = useNavigate()
   const lokasi = useLocation()
+  const { pengguna } = useSession()
+  const isAdmin = pengguna?.peran === 'Admin'
 
   useEffect(() => {
     let aktif = true
@@ -262,12 +284,12 @@ export default function Transaksi() {
         eyebrow="Penjualan"
         title="Transaksi"
         description="Catat dan tinjau transaksi penjualan toko."
-        action={
+        action={isAdmin && (
           <Button onClick={() => navigate('/transaksi/baru')}>
             <Plus size={16} />
             Transaksi Baru
           </Button>
-        }
+        )}
       />
 
       <Card className="overflow-hidden">
@@ -335,12 +357,12 @@ export default function Transaksi() {
             icon={ShoppingCart}
             title="Belum ada transaksi"
             description="Mulai dengan mencatat transaksi penjualan pertama."
-            action={
+            action={isAdmin && (
               <Button onClick={() => navigate('/transaksi/baru')}>
                 <Plus size={16} />
                 Transaksi Baru
               </Button>
-            }
+            )}
             className="py-14"
           />
         ) : (

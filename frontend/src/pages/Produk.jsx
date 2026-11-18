@@ -9,6 +9,7 @@ import {
   Save,
   Search,
   SearchX,
+  ShoppingCart,
   Trash2,
   TriangleAlert,
   X,
@@ -18,18 +19,24 @@ import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
+import ImageUploader from '../components/ImageUploader'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
+import ProductImage from '../components/ProductImage'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { ambilData } from '../lib/api'
+import { tambahKeKeranjang } from '../lib/keranjang'
+import { dataUrlKeBerkas } from '../lib/gambar'
 import { formatAngka, formatRupiah } from '../lib/format'
+import { useSession } from '../lib/session'
 
 const formKosong = {
   nama_produk: '',
   id_kategori: '',
   harga: '',
   stok: '',
+  foto: '',
 }
 
 const BATAS_STOK_MENIPIS = 10
@@ -54,11 +61,15 @@ export default function Produk() {
   const [galatForm, setGalatForm] = useState('')
   const [menyimpan, setMenyimpan] = useState(false)
 
+  const [fotoPratinjau, setFotoPratinjau] = useState(null)
+
   const [targetHapus, setTargetHapus] = useState(null)
   const [galatHapus, setGalatHapus] = useState('')
   const [menghapus, setMenghapus] = useState(false)
 
   const { sukses, gagal } = useToast()
+  const { pengguna } = useSession()
+  const isAdmin = pengguna?.peran === 'Admin'
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -152,6 +163,7 @@ export default function Produk() {
       id_kategori: String(produk.id_kategori),
       harga: String(produk.harga),
       stok: String(produk.stok),
+      foto: produk.foto ?? '',
     })
     setGalatForm('')
     setFormTerbuka(true)
@@ -200,25 +212,30 @@ export default function Produk() {
     setGalatForm('')
 
     try {
-      const muatan = {
-        nama_produk: nama,
-        id_kategori: Number(form.id_kategori),
-        harga,
-        stok,
+      const muatan = new FormData()
+      muatan.append('nama_produk', nama)
+      muatan.append('id_kategori', String(Number(form.id_kategori)))
+      muatan.append('harga', String(harga))
+      muatan.append('stok', String(stok))
+
+      if (form.foto.startsWith('data:')) {
+        // Foto baru hasil pratinjau Data URL dikirim sebagai berkas unggahan.
+        muatan.append('foto', await dataUrlKeBerkas(form.foto), 'foto.jpg')
+      } else if (form.foto === '' && produkDiubah?.foto) {
+        // Foto lama dihapus oleh pengguna.
+        muatan.append('hapus_foto', '1')
       }
 
       if (produkDiubah) {
         await ambilData(`/api/produk.php?id=${produkDiubah.id_produk}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(muatan),
+          body: muatan,
         })
         sukses('Data produk berhasil diperbarui.')
       } else {
         await ambilData('/api/produk.php', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(muatan),
+          body: muatan,
         })
         sukses('Produk baru berhasil ditambahkan.')
         bersihkanFilter()
@@ -277,9 +294,47 @@ export default function Produk() {
     (item) => String(item.id_kategori) === filterKategori,
   )
 
+  function tambahkanKeKeranjang(produk) {
+    tambahKeKeranjang(produk.id_produk, 1)
+    sukses(`Produk "${produk.nama_produk}" ditambahkan ke keranjang.`)
+  }
+
+  function fotoProduk(produk) {
+    return (
+      <button
+        type="button"
+        onClick={() => setFotoPratinjau(produk)}
+        disabled={!produk.foto}
+        aria-label={`Lihat foto produk ${produk.nama_produk}`}
+        title={produk.foto ? 'Lihat foto' : 'Belum ada foto'}
+        className="shrink-0 rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+      >
+        <ProductImage
+          foto={produk.foto}
+          nama={produk.nama_produk}
+          className="h-10 w-10"
+          ikonSize={18}
+        />
+      </button>
+    )
+  }
+
   function tombolAksi(produk) {
+    if (!isAdmin) return null
+    const stokHabis = Number(produk.stok) < 1
+
     return (
       <div className="flex items-center justify-end gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => tambahkanKeKeranjang(produk)}
+          disabled={stokHabis}
+          aria-label={`Tambahkan produk ${produk.nama_produk} ke keranjang`}
+          title={stokHabis ? 'Stok habis' : 'Tambahkan ke keranjang'}
+        >
+          <ShoppingCart size={16} />
+        </Button>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -318,12 +373,16 @@ export default function Produk() {
       <PageHeader
         eyebrow="Data Master"
         title="Produk"
-        description="Kelola katalog produk, kategori, harga, dan stok barang."
+        description={isAdmin
+          ? 'Kelola katalog produk, kategori, harga, dan stok barang.'
+          : 'Lihat katalog produk, harga, kategori, dan ketersediaan stok.'}
         action={
-          <Button onClick={bukaTambah}>
-            <Plus size={16} />
-            Tambah Produk
-          </Button>
+          isAdmin && (
+            <Button onClick={bukaTambah}>
+              <Plus size={16} />
+              Tambah Produk
+            </Button>
+          )
         }
       />
 
@@ -480,12 +539,12 @@ export default function Produk() {
                   <X size={16} />
                   Reset Filter
                 </Button>
-              ) : (
+              ) : isAdmin ? (
                 <Button onClick={bukaTambah}>
                   <Plus size={16} />
                   Tambah Produk
                 </Button>
-              )
+              ) : null
             }
             className="py-14"
           />
@@ -510,12 +569,12 @@ export default function Produk() {
                     <th scope="col" className="px-5 py-3 font-medium">
                       Stok
                     </th>
-                    <th
+                    {isAdmin && <th
                       scope="col"
                       className="px-5 py-3 text-right font-medium"
                     >
                       Aksi
-                    </th>
+                    </th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -526,9 +585,7 @@ export default function Produk() {
                     >
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                            <Package size={17} strokeWidth={1.9} />
-                          </span>
+                          {fotoProduk(produk)}
                           <span className="whitespace-nowrap font-medium text-slate-800 dark:text-slate-100">
                             {produk.nama_produk}
                           </span>
@@ -543,7 +600,7 @@ export default function Produk() {
                         {formatRupiah(produk.harga)}
                       </td>
                       <td className="px-5 py-3.5">{labelStok(produk.stok)}</td>
-                      <td className="px-5 py-3.5">{tombolAksi(produk)}</td>
+                      {isAdmin && <td className="px-5 py-3.5">{tombolAksi(produk)}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -558,9 +615,7 @@ export default function Produk() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        <Package size={17} strokeWidth={1.9} />
-                      </span>
+                      {fotoProduk(produk)}
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                           {produk.nama_produk}
@@ -686,6 +741,14 @@ export default function Produk() {
               Wajib diisi, maksimal 100 karakter.
             </p>
           </div>
+
+          <ImageUploader
+            value={form.foto}
+            onChange={(foto) =>
+              setForm((sebelumnya) => ({ ...sebelumnya, foto }))
+            }
+            disabled={menyimpan}
+          />
 
           <div>
             <label
@@ -851,6 +914,39 @@ export default function Produk() {
           >
             <TriangleAlert size={15} className="mt-0.5 shrink-0" />
             <span>{galatHapus}</span>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(fotoPratinjau)}
+        onClose={() => setFotoPratinjau(null)}
+        title="Foto Produk"
+        description={fotoPratinjau?.nama_produk ?? ''}
+        size="lg"
+        footer={
+          <Button
+            variant="secondary"
+            onClick={() => setFotoPratinjau(null)}
+          >
+            Tutup
+          </Button>
+        }
+      >
+        {fotoPratinjau?.foto ? (
+          <img
+            src={fotoPratinjau.foto}
+            alt={`Foto produk ${fotoPratinjau.nama_produk}`}
+            className="mx-auto max-h-[60vh] w-auto rounded-xl bg-slate-50 object-contain dark:bg-slate-950"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+              <Package size={28} strokeWidth={1.8} />
+            </span>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Produk ini belum memiliki foto.
+            </p>
           </div>
         )}
       </Modal>

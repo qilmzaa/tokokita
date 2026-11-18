@@ -3,10 +3,12 @@ import { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { labelHalaman } from '../lib/navigation'
 import { useTheme } from '../lib/theme'
+import { useSession } from '../lib/session'
 
 export default function Topbar({ onBukaMenu }) {
   const { gelap, gantiTema } = useTheme()
   const { pathname } = useLocation()
+  const { pengguna } = useSession()
   const judul = labelHalaman(pathname)
 
   const tanggalHariIni = useMemo(
@@ -68,14 +70,14 @@ export default function Topbar({ onBukaMenu }) {
 
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 select-none items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-semibold text-white shadow-sm shadow-indigo-600/30">
-              A
+              {(pengguna?.nama_lengkap ?? 'U').trim().slice(0, 1).toUpperCase()}
             </span>
             <div className="hidden leading-tight sm:block">
               <p className="text-sm font-medium text-slate-900 dark:text-white">
-                Admin Toko
+                {pengguna?.nama_lengkap ?? 'Pengguna'}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                XII RPL 1
+                {pengguna?.peran ?? 'Pengguna'}
               </p>
             </div>
           </div>

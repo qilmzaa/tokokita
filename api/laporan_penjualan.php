@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
-wajibLogin();
+wajibPeran(['Admin']);
 
 /**
  * Mengambil parameter filter berupa teks dari query string.
@@ -85,7 +85,7 @@ try {
     // Seluruh data laporan diambil langsung dari view, tanpa menulis ulang JOIN.
     $stmt = $pdo->prepare(
         'SELECT id_transaksi, tanggal, nama_pelanggan, kota, nama_kategori,
-                nama_produk, jumlah, harga, diskon_persen, subtotal
+                nama_produk, foto, jumlah, harga, diskon_persen, subtotal
          FROM view_laporan_penjualan' . $where . '
          ORDER BY tanggal ASC, id_transaksi ASC, nama_produk ASC'
     );
@@ -99,6 +99,7 @@ try {
             'kota'           => $baris['kota'],
             'nama_kategori'  => $baris['nama_kategori'],
             'nama_produk'    => $baris['nama_produk'],
+            'foto'           => $baris['foto'] !== null ? (string) $baris['foto'] : null,
             'jumlah'         => (int) $baris['jumlah'],
             'harga'          => (float) $baris['harga'],
             'diskon_persen'  => (float) $baris['diskon_persen'],

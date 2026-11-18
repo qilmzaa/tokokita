@@ -16,14 +16,14 @@ Tabel:
 
 - `tbl_pelanggan(id_pelanggan, nama_pelanggan, kota)`
 - `tbl_kategori(id_kategori, nama_kategori)`
-- `tbl_produk(id_produk, nama_produk, id_kategori, harga, stok)`
+- `tbl_produk(id_produk, nama_produk, id_kategori, harga, stok, foto)`
 - `tbl_transaksi(id_transaksi, tanggal, id_pelanggan, total_belanja)`
 - `tbl_detail_transaksi(id_detail, id_transaksi, id_produk, jumlah, harga, diskon_persen, subtotal)`
 - `tbl_log(id_log, tabel, aktivitas, keterangan, waktu)`
 
 View:
 
-- `view_laporan_penjualan(id_transaksi, tanggal, nama_pelanggan, kota, nama_kategori, nama_produk, jumlah, harga, diskon_persen, subtotal)`
+- `view_laporan_penjualan(id_transaksi, tanggal, nama_pelanggan, kota, nama_kategori, nama_produk, foto, jumlah, harga, diskon_persen, subtotal)`
 - `view_total_belanja(id_pelanggan, nama_pelanggan, total_transaksi, total_belanja)`
 
 Stored procedure:
@@ -50,8 +50,9 @@ Function:
 
 - **Dashboard** — selesai.
 - **Pelanggan** — selesai (daftar, pencarian, tambah, ubah, hapus).
-- **Produk** — selesai (daftar, pencarian, filter kategori, tambah, ubah, hapus).
+- **Produk** — selesai (daftar, pencarian, filter kategori, tambah, ubah, hapus, foto produk: unggah/ganti/hapus).
 - **Transaksi** — selesai (daftar, detail, transaksi baru).
+- **Keranjang** — selesai (tambah produk ke keranjang dari halaman Produk, atur jumlah/diskon, checkout menjadi transaksi dengan struk).
 - **Laporan** — selesai (laporan penjualan dengan filter, cetak, ekspor CSV; rekap belanja pelanggan dengan grafik dan kategori).
 - **Log** — masih placeholder.
 
@@ -77,15 +78,17 @@ tokokita/
 │   ├── pelanggan.php       # CRUD pelanggan (GET/POST/PUT/DELETE)
 │   ├── produk.php          # CRUD produk (GET/POST/PUT/DELETE)
 │   ├── transaksi.php       # daftar/detail transaksi + simpan transaksi baru
+│   ├── uploads/produk/     # foto produk yang diunggah (dilayani Apache)
 │   ├── laporan_penjualan.php # laporan penjualan dari view (GET + filter)
 │   └── laporan_pelanggan.php # rekap belanja pelanggan dari view (GET)
 └── frontend/
     ├── vite.config.js      # proxy /api
+    ├── public/images/produk/ # placeholder foto produk (SVG)
     └── src/
         ├── components/     # komponen UI reusable
         ├── layouts/        # layout sidebar + topbar
         ├── pages/          # halaman aplikasi
-        ├── lib/            # util (formatRupiah, fetch API)
+        ├── lib/            # util (formatRupiah, fetch API, keranjang belanja, kompresi gambar)
         └── ...
 ```
 

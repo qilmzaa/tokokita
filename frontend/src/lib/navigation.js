@@ -1,8 +1,11 @@
 import {
   BarChart3,
+  CircleUserRound,
   History,
   LayoutDashboard,
   Package,
+  ScanBarcode,
+  ShoppingBag,
   ShoppingCart,
   Users,
 } from 'lucide-react'
@@ -26,6 +29,24 @@ export const menuNavigasi = [
     label: 'Produk',
     ikon: Package,
     deskripsi: 'Kelola katalog produk, kategori, harga, dan stok barang.',
+  },
+  {
+    to: '/kasir',
+    label: 'Kasir',
+    ikon: ScanBarcode,
+    deskripsi: 'Layani penjualan dan pembayaran pelanggan.',
+  },
+  {
+    to: '/keranjang',
+    label: 'Keranjang',
+    ikon: ShoppingBag,
+    deskripsi: 'Tinjau barang di keranjang dan checkout menjadi transaksi.',
+  },
+  {
+    to: '/pengguna',
+    label: 'Pengguna',
+    ikon: CircleUserRound,
+    deskripsi: 'Kelola akun Admin dan Kasir.',
   },
   {
     to: '/transaksi',

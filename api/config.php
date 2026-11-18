@@ -80,12 +80,104 @@ function mulaiSesi(?bool $ingatSaya = null): void
     session_start();
 }
 
-/** Melindungi endpoint data agar hanya dapat diakses setelah login. */
-function wajibLogin(): void
+/** Menyiapkan akun demo sekali saja; kata sandi selalu disimpan sebagai hash. */
+function siapkanPenggunaAwal(): void
 {
-    mulaiSesi();
+    global $pdo;
 
-    if (!isset($_SESSION['tokokita_user'])) {
+    $pdo->prepare(
+        'CREATE TABLE IF NOT EXISTS tbl_pengguna (
+            id_pengguna INT AUTO_INCREMENT PRIMARY KEY,
+            nama_lengkap VARCHAR(100) NOT NULL,
+            username VARCHAR(50) NOT NULL UNIQUE,
+            password_hash VARCHAR(255) NOT NULL,
+            peran ENUM(\'Admin\', \'Kasir\') NOT NULL,
+            status_aktif TINYINT(1) NOT NULL DEFAULT 1,
+            dibuat_pada TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    )->execute();
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM tbl_pengguna');
+    $stmt->execute();
+    if ((int) $stmt->fetchColumn() !== 0) {
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO tbl_pengguna
+            (nama_lengkap, username, password_hash, peran, status_aktif)
+         VALUES (:nama, :username, :password, :peran, 1)'
+    );
+    foreach ([
+        ['Admin Toko', 'admin', 'Admin123!', 'Admin'],
+        ['Kasir Satu', 'kasir', 'Kasir123!', 'Kasir'],
+        ['Kasir Dua', 'kasir2', 'Kasir123!', 'Kasir'],
+    ] as [$nama, $username, $kataSandi, $peran]) {
+        $stmt->execute([
+            ':nama' => $nama,
+            ':username' => $username,
+            ':password' => password_hash($kataSandi, PASSWORD_DEFAULT),
+            ':peran' => $peran,
+        ]);
+    }
+}
+
+/** Mengembalikan profil sesi yang masih aktif. */
+function penggunaSaatIni(): ?array
+{
+    global $pdo;
+
+    mulaiSesi();
+    $id = filter_var($_SESSION['tokokita_user_id'] ?? null, FILTER_VALIDATE_INT);
+    if ($id === false || $id === null || $id < 1) {
+        return null;
+    }
+
+    static $profil = null;
+    if (is_array($profil)) {
+        return $profil;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT id_pengguna, nama_lengkap, username, peran
+         FROM tbl_pengguna
+         WHERE id_pengguna = :id AND status_aktif = 1'
+    );
+    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+    $stmt->execute();
+    $baris = $stmt->fetch();
+    if ($baris === false) {
+        return null;
+    }
+
+    $profil = [
+        'id_pengguna' => (int) $baris['id_pengguna'],
+        'nama_lengkap' => $baris['nama_lengkap'],
+        'nama_pengguna' => $baris['username'],
+        'peran' => $baris['peran'],
+    ];
+
+    return $profil;
+}
+
+/** Melindungi endpoint data agar hanya dapat diakses setelah login. */
+function wajibLogin(): array
+{
+    $profil = penggunaSaatIni();
+    if ($profil === null) {
         kirimError('Silakan masuk terlebih dahulu.', 401);
     }
+
+    return $profil;
+}
+
+/** Melindungi endpoint berdasarkan peran pengguna. */
+function wajibPeran(array $peranDiizinkan): array
+{
+    $profil = wajibLogin();
+    if (!in_array($profil['peran'], $peranDiizinkan, true)) {
+        kirimError('Anda tidak memiliki akses.', 403);
+    }
+
+    return $profil;
 }

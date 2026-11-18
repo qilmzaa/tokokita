@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 
-export default function AppLayout() {
+export default function AppLayout({ children }) {
   const [menuTerbuka, setMenuTerbuka] = useState(false)
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function AppLayout() {
             className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-indigo-50/70 via-slate-50/0 to-transparent dark:from-indigo-500/[0.04] print:hidden"
           />
           <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 pt-6 sm:px-6 sm:pt-8 lg:px-8 print:px-0 print:pb-0 print:pt-0">
-            <Outlet />
+            {children ?? <Outlet />}
           </div>
         </main>
 

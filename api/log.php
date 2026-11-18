@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
-wajibLogin();
+wajibPeran(['Admin']);
 
 /**
  * Mengambil parameter bilangan bulat dari query string beserta batasnya.

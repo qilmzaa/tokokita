@@ -27,6 +27,7 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
 import PageHeader from '../components/PageHeader'
+import ProductImage from '../components/ProductImage'
 import Skeleton from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { ambilData } from '../lib/api'
@@ -575,12 +576,22 @@ function PanelPenjualan() {
                             </p>
                           </td>
                           <td className="px-5 py-3.5">
-                            <p className="text-slate-700 dark:text-slate-200">
-                              {item.nama_produk}
-                            </p>
-                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                              {item.nama_kategori}
-                            </p>
+                            <div className="flex items-center gap-2.5">
+                              <ProductImage
+                                foto={item.foto}
+                                nama={item.nama_produk}
+                                className="h-9 w-9"
+                                ikonSize={16}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-slate-700 dark:text-slate-200">
+                                  {item.nama_produk}
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                  {item.nama_kategori}
+                                </p>
+                              </div>
+                            </div>
                           </td>
                           <td className="whitespace-nowrap px-5 py-3.5 text-right text-slate-600 dark:text-slate-300">
                             {formatAngka(item.jumlah)}
@@ -622,15 +633,23 @@ function PanelPenjualan() {
                       className="px-4 py-3.5"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                            {item.nama_produk}
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            {item.nama_kategori} ·{' '}
-                            {formatAngka(item.jumlah)} ×{' '}
-                            {formatRupiah(item.harga)}
-                          </p>
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <ProductImage
+                            foto={item.foto}
+                            nama={item.nama_produk}
+                            className="h-10 w-10"
+                            ikonSize={18}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                              {item.nama_produk}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                              {item.nama_kategori} ·{' '}
+                              {formatAngka(item.jumlah)} ×{' '}
+                              {formatRupiah(item.harga)}
+                            </p>
+                          </div>
                         </div>
                         <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-white">
                           {formatRupiah(item.subtotal)}

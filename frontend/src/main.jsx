@@ -8,12 +8,15 @@ import './index.css'
 import App from './App.jsx'
 import { ToastProvider } from './components/Toast.jsx'
 import { ThemeProvider } from './lib/theme.jsx'
+import { SessionProvider } from './lib/session.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
       <ToastProvider>
-        <App />
+        <SessionProvider>
+          <App />
+        </SessionProvider>
       </ToastProvider>
     </ThemeProvider>
   </StrictMode>,

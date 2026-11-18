@@ -15,8 +15,25 @@ USE db_toko_proyek;
 CREATE TABLE tbl_pelanggan (
     id_pelanggan INT AUTO_INCREMENT PRIMARY KEY,
     nama_pelanggan VARCHAR(100) NOT NULL,
-    kota VARCHAR(50)
+    kota VARCHAR(50),
+    email VARCHAR(254) NULL,
+    nomor_hp VARCHAR(20) NULL,
+    UNIQUE KEY uq_pelanggan_email (email),
+    UNIQUE KEY uq_pelanggan_nomor_hp (nomor_hp)
 ) ENGINE=InnoDB;
+
+CREATE TABLE tbl_akun_pelanggan (
+    id_akun INT AUTO_INCREMENT PRIMARY KEY,
+    id_pelanggan INT NOT NULL UNIQUE,
+    email VARCHAR(254) NOT NULL UNIQUE,
+    nomor_hp VARCHAR(20) NOT NULL UNIQUE,
+    username VARCHAR(50) NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    dibuat_pada TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_akun_pelanggan_username (username),
+    FOREIGN KEY (id_pelanggan) REFERENCES tbl_pelanggan(id_pelanggan)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE tbl_kategori (
     id_kategori INT AUTO_INCREMENT PRIMARY KEY,
@@ -32,12 +49,30 @@ CREATE TABLE tbl_produk (
     FOREIGN KEY (id_kategori) REFERENCES tbl_kategori(id_kategori)
 ) ENGINE=InnoDB;
 
+CREATE TABLE tbl_pengguna (
+    id_pengguna INT AUTO_INCREMENT PRIMARY KEY,
+    nama_lengkap VARCHAR(100) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    peran ENUM('Admin', 'Kasir') NOT NULL,
+    status_aktif TINYINT(1) NOT NULL DEFAULT 1,
+    dibuat_pada TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE tbl_transaksi (
     id_transaksi INT AUTO_INCREMENT PRIMARY KEY,
     tanggal DATE NOT NULL,
+    waktu_transaksi DATETIME NULL,
     id_pelanggan INT NOT NULL,
     total_belanja DECIMAL(12,2) NOT NULL DEFAULT 0,
-    FOREIGN KEY (id_pelanggan) REFERENCES tbl_pelanggan(id_pelanggan)
+    id_pengguna INT NULL,
+    nama_kasir VARCHAR(100) NULL,
+    metode_pembayaran VARCHAR(20) NULL,
+    uang_diterima DECIMAL(12,2) NULL,
+    kembalian DECIMAL(12,2) NULL,
+    diskon_nominal DECIMAL(12,2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (id_pelanggan) REFERENCES tbl_pelanggan(id_pelanggan),
+    FOREIGN KEY (id_pengguna) REFERENCES tbl_pengguna(id_pengguna) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE tbl_detail_transaksi (
@@ -86,7 +121,8 @@ INSERT INTO tbl_pelanggan (nama_pelanggan, kota) VALUES
 ('Eko',    'Madiun'),
 ('Fitri',  'Sumenep'),
 ('Gilang', 'Surabaya'),
-('Hana',   'Ponorogo');   -- Hana sengaja belum punya transaksi
+('Hana',   'Ponorogo'),   -- Hana sengaja belum punya transaksi
+('Umum',  NULL);
 
 -- =====================================================
 -- C. FUNCTION (menghitung total dan diskon)

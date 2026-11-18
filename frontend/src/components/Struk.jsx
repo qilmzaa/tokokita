@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Button from './Button'
-import { formatAngka, formatRupiah } from '../lib/format'
+import { formatAngka, formatRupiah, formatWaktu } from '../lib/format'
 import toko from '../config/toko'
 
 export function cetakStruk() {
@@ -40,11 +40,18 @@ function tanggalStruk(nilai) {
   return bagian.length === 3 ? `${bagian[2]}/${bagian[1]}/${bagian[0]}` : '—'
 }
 
-export default function Struk({ transaksi, tampilkanTombolCetak = false }) {
+export default function Struk({
+  transaksi,
+  tampilkanTombolCetak = false,
+  tampilkanKontrol = true,
+}) {
   const [uangDiterima, setUangDiterima] = useState('')
   const total = Number(transaksi.total_belanja) || 0
   const kuantitas = (transaksi.items ?? []).reduce((jumlah, item) => jumlah + Number(item.jumlah || 0), 0)
-  const uang = uangDiterima === '' ? null : Number(uangDiterima)
+  const uangTercatat = transaksi.uang_diterima ?? null
+  const uang = uangTercatat !== null
+    ? Number(uangTercatat)
+    : uangDiterima === '' ? null : Number(uangDiterima)
 
   return (
     <div className="struk-panggung mx-auto w-full max-w-[300px]">
@@ -57,9 +64,9 @@ export default function Struk({ transaksi, tampilkanTombolCetak = false }) {
         <div className="struk-garis my-3 border-t border-dashed border-black" />
         <dl className="space-y-0.5">
           <div className="flex justify-between gap-2"><dt>No. Transaksi</dt><dd className="text-right">TRX-{String(transaksi.id_transaksi).padStart(6, '0')}</dd></div>
-          <div className="flex justify-between gap-2"><dt>Tanggal</dt><dd className="text-right">{tanggalStruk(transaksi.tanggal)}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Tanggal</dt><dd className="text-right">{transaksi.waktu_transaksi ? formatWaktu(transaksi.waktu_transaksi) : tanggalStruk(transaksi.tanggal)}</dd></div>
           <div className="flex justify-between gap-2"><dt>Pelanggan</dt><dd className="text-right">{transaksi.nama_pelanggan}</dd></div>
-          <div className="flex justify-between gap-2"><dt>Kasir</dt><dd className="text-right">{toko.kasir}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Kasir</dt><dd className="text-right">{transaksi.nama_kasir ?? toko.kasir}</dd></div>
         </dl>
         <div className="struk-garis my-3 border-t border-dashed border-black" />
         <div className="space-y-2">
@@ -73,18 +80,20 @@ export default function Struk({ transaksi, tampilkanTombolCetak = false }) {
         </div>
         <div className="struk-garis my-3 border-t border-dashed border-black" />
         <div className="flex items-center justify-between gap-2 text-sm font-bold"><span>TOTAL</span><span className="text-right">{formatRupiah(transaksi.total_belanja)}</span></div>
+        {Number(transaksi.diskon_nominal) > 0 && <div className="flex justify-between gap-2"><span>Diskon</span><span className="text-right">- {formatRupiah(transaksi.diskon_nominal)}</span></div>}
         <div className="mt-1 flex justify-between gap-2"><span>Jumlah item</span><span className="text-right">{formatAngka((transaksi.items ?? []).length)}</span></div>
         <div className="flex justify-between gap-2"><span>Total kuantitas</span><span className="text-right">{formatAngka(kuantitas)}</span></div>
-        {uang !== null && Number.isFinite(uang) && <div className="mt-1 space-y-0.5 border-t border-dashed border-black pt-1"><div className="flex justify-between gap-2"><span>Tunai</span><span className="text-right">{formatRupiah(uang)}</span></div><div className="flex justify-between gap-2"><span>Kembali</span><span className="text-right">{formatRupiah(uang - total)}</span></div></div>}
+        {transaksi.metode_pembayaran && <div className="mt-1 flex justify-between gap-2"><span>Metode</span><span className="text-right">{transaksi.metode_pembayaran}</span></div>}
+        {uang !== null && Number.isFinite(uang) && <div className="mt-1 space-y-0.5 border-t border-dashed border-black pt-1"><div className="flex justify-between gap-2"><span>{transaksi.metode_pembayaran === 'Tunai' || !transaksi.metode_pembayaran ? 'Tunai' : 'Bayar'}</span><span className="text-right">{formatRupiah(uang)}</span></div><div className="flex justify-between gap-2"><span>Kembali</span><span className="text-right">{formatRupiah(transaksi.kembalian ?? uang - total)}</span></div></div>}
         <div className="struk-garis my-3 border-t border-dashed border-black" />
         <footer className="space-y-1 text-center"><p>Terima kasih atas kunjungan Anda</p><p className="text-[10px]">Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p></footer>
       </div>
-      <div className="struk-kontrol mt-3 space-y-2">
+      {tampilkanKontrol && <div className="struk-kontrol mt-3 space-y-2">
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">Uang diterima (opsional)
           <input type="number" min="0" step="1" inputMode="numeric" value={uangDiterima} onChange={(event) => setUangDiterima(event.target.value)} placeholder="Masukkan nominal tunai" className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
         </label>
         {tampilkanTombolCetak && <Button className="w-full" onClick={cetakStruk}>Cetak Struk</Button>}
-      </div>
+      </div>}
     </div>
   )
 }

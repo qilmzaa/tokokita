@@ -1,0 +1,6 @@
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Foto produk yang diunggah pengguna (tersimpan di server, bukan di git)
+api/uploads/

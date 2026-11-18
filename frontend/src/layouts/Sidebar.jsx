@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { ambilData } from '../lib/api'
 import { useToast } from '../components/Toast'
 import { menuNavigasi } from '../lib/navigation'
+import { useSession } from '../lib/session'
 
 export default function Sidebar({ terbuka, onTutup }) {
   const navigate = useNavigate()
   const { gagal } = useToast()
+  const { pengguna, setPengguna } = useSession()
   const [sedangKeluar, setSedangKeluar] = useState(false)
 
   async function keluar() {
@@ -15,6 +17,8 @@ export default function Sidebar({ terbuka, onTutup }) {
     setSedangKeluar(true)
     try {
       await ambilData('/api/auth.php', { method: 'DELETE' })
+      setPengguna(null)
+      window.localStorage.removeItem('tokokita_mode')
       navigate('/login', { replace: true })
     } catch (error) {
       gagal(error instanceof Error ? error.message : 'Gagal keluar dari akun.')
@@ -22,6 +26,12 @@ export default function Sidebar({ terbuka, onTutup }) {
       setSedangKeluar(false)
     }
   }
+
+  const menuTerlihat = pengguna?.peran === 'Admin'
+    ? menuNavigasi
+    : menuNavigasi.filter((item) =>
+        ['/', '/pelanggan', '/produk', '/kasir', '/transaksi'].includes(item.to),
+      )
 
   return (
     <>
@@ -67,7 +77,7 @@ export default function Sidebar({ terbuka, onTutup }) {
             Menu Utama
           </p>
           <ul className="space-y-1">
-            {menuNavigasi.map((item) => {
+            {menuTerlihat.map((item) => {
               const Ikon = item.ikon
 
               return (
